@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Monitoreo PDU</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="5">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        
+        .config-panel {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 2px solid #3498db;
+        }
+        
+        .config-title {
+            color: #2c3e50;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .input-group input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            font-size: 16px;
+            min-width: 200px;
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: #2ecc71;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #27ae60;
+            transform: translateY(-2px);
+        }
+        
+        .status-bar {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4CAF50;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            font-size: 14px;
+        }
+        
+        th {
+            background: #3498db;
+            color: white;
+            padding: 12px 8px;
+            position: sticky;
+            top: 0;
+            white-space: nowrap;
+            z-index: 10;
+        }
+        
+        td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: center;
+        }
+        
+        tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        tr:hover {
+            background: #e8f4f8;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            color: #666;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 1.5em;
+            }
+            
+            .input-group {
+                flex-direction: column;
+            }
+            
+            .input-group input {
+                width: 100%;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+            
+            th, td {
+                padding: 8px 5px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 MONITOREO PDU</h1>
+        
+        <div class="config-panel">
+            <div class="config-title">
+                <span>📡 CONFIGURACIÓN DEL SERVIDOR</span>
+            </div>
+            
+            <div class="input-group">
+                <input type="text" id="serverIp" placeholder="IP del servidor (ej: 192.168.173.11)" value="192.168.173.11">
+                <button class="btn btn-primary" onclick="connectToServer()">🔌 Conectar</button>
+                <button class="btn btn-success" onclick="testMeasurement()">📊 Medir Ahora</button>
+            </div>
+            
+            <div id="connectionStatus" style="margin-top: 15px; padding: 10px; border-radius: 5px; display: none;"></div>
+        </div>
+        
+        <div id="serverInfo" class="status-bar" style="display: none;">
+            <div class="status-item">
+                <span class="status-dot"></span>
+                <span id="updateInterval">Conectado</span>
+            </div>
+            <div class="status-item">
+                <span>🕒 <span id="lastUpdate">-</span></span>
+            </div>
+            <div class="status-item">
+                <span>📊 <span id="totalRecords">0</span> registros</span>
+            </div>
+            <div class="status-item">
+                <span>🏭 Rack: <span id="rackName">-</span></span>
+            </div>
+        </div>
+        
+        <div id="dataContainer" class="table-container" style="display: none;">
+            <table id="dataTable">
+                <thead id="tableHeader">
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Hora</th>
+                        <th colspan="6">Sistema A</th>
+                        <th colspan="6">Sistema B</th>
+                    </tr>
+                    <tr id="subHeader">
+                        <th></th>
+                        <th></th>
+                        <th>Energía</th>
+                        <th>P.Activa</th>
+                        <th>P.Aparente</th>
+                        <th>Corriente</th>
+                        <th>Voltaje</th>
+                        <th>FP</th>
+                        <th>Energía</th>
+                        <th>P.Activa</th>
+                        <th>P.Aparente</th>
+                        <th>Corriente</th>
+                        <th>Voltaje</th>
+                        <th>FP</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td colspan="14" style="text-align: center; padding: 50px;">
+                            Conecta al servidor para ver los datos
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+        
+        <div class="footer">
+            <p id="deviceInfo"></p>
+        </div>
+    </div>
+
+    <script>
+        let currentServerIp = '';
+        let autoRefreshInterval = null;
+        
+        function isMobile() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+        
+        function showDeviceInfo() {
+            const info = document.getElementById('deviceInfo');
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const deviceType = isMobile() ? '📱 Móvil' : (width <= 1024 ? '💻 Tablet' : '🖥️ Escritorio');
+            info.textContent = `Visto desde: ${deviceType} (${width}x${height})`;
+        }
+        
+        async function connectToServer() {
+            const serverIp = document.getElementById('serverIp').value.trim();
+            if (!serverIp) {
+                alert('Por favor ingresa la IP del servidor');
+                return;
+            }
+            
+            // Limpiar el IP si tiene http://
+            currentServerIp = serverIp.replace('http://', '').replace('https://', '').split(':')[0];
+            
+            const statusDiv = document.getElementById('connectionStatus');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = '🔄 Conectando...';
+            statusDiv.style.background = '#e8f4f8';
+            
+            try {
+                // Probar conexión
+                const infoResponse = await fetch(`http://${currentServerIp}:5000/api/info`);
+                if (!infoResponse.ok) throw new Error('No se pudo conectar');
+                
+                const info = await infoResponse.json();
+                
+                statusDiv.innerHTML = '✅ Conectado correctamente';
+                statusDiv.style.background = '#d4edda';
+                statusDiv.style.color = '#155724';
+                
+                // Mostrar información del servidor
+                document.getElementById('serverInfo').style.display = 'flex';
+                document.getElementById('rackName').textContent = info.rack;
+                document.getElementById('totalRecords').textContent = info.total_registros;
+                
+                // Cargar datos
+                await loadData();
+                
+                // Iniciar auto-refresh
+                if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+                autoRefreshInterval = setInterval(loadData, 5000);
+                
+            } catch (error) {
+                statusDiv.innerHTML = '❌ Error de conexión. Verifica la IP y que el servidor esté corriendo.';
+                statusDiv.style.background = '#f8d7da';
+                statusDiv.style.color = '#721c24';
+                document.getElementById('serverInfo').style.display = 'none';
+                document.getElementById('dataContainer').style.display = 'none';
+            }
+        }
+        
+        async function loadData() {
+            if (!currentServerIp) return;
+            
+            try {
+                const response = await fetch(`http://${currentServerIp}:5000/api/datos`);
+                if (!response.ok) throw new Error('Error cargando datos');
+                
+                const data = await response.json();
+                
+                // Actualizar última actualización
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+                document.getElementById('totalRecords').textContent = data.length;
+                
+                // Mostrar tabla
+                document.getElementById('dataContainer').style.display = 'block';
+                document.getElementById('errorMessage').style.display = 'none';
+                
+                // Actualizar tabla
+                updateTable(data);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('errorMessage').style.display = 'block';
+                document.getElementById('errorMessage').innerHTML = '❌ Error cargando datos: ' + error.message;
+            }
+        }
+        
+        function updateTable(data) {
+            const tbody = document.getElementById('tableBody');
+            
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="14" style="text-align: center;">No hay datos disponibles</td></tr>';
+                return;
+            }
+            
+            let html = '';
+            data.slice().reverse().forEach(row => {
+                html += '<tr>';
+                html += `<td>${row.Fecha || '-'}</td>`;
+                html += `<td>${row.Hora || '-'}</td>`;
+                html += `<td>${row.Energia_A || '-'}</td>`;
+                html += `<td>${row.Potencia_Activa_A || '-'}</td>`;
+                html += `<td>${row.Potencia_Aparente_A || '-'}</td>`;
+                html += `<td>${row.Corriente_A || '-'}</td>`;
+                html += `<td>${row.Voltaje_A || '-'}</td>`;
+                html += `<td>${row.FP_A || '-'}</td>`;
+                html += `<td>${row.Energia_B || '-'}</td>`;
+                html += `<td>${row.Potencia_Activa_B || '-'}</td>`;
+                html += `<td>${row.Potencia_Aparente_B || '-'}</td>`;
+                html += `<td>${row.Corriente_B || '-'}</td>`;
+                html += `<td>${row.Voltaje_B || '-'}</td>`;
+                html += `<td>${row.FP_B || '-'}</td>`;
+                html += '</tr>';
+            });
+            
+            tbody.innerHTML = html;
+        }
+        
+        async function testMeasurement() {
+            if (!currentServerIp) {
+                alert('Primero conecta al servidor');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://${currentServerIp}:5000/api/medir`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    alert('Medición iniciada. Los datos se actualizarán en breve.');
+                }
+            } catch (error) {
+                alert('Error iniciando medición: ' + error.message);
+            }
+        }
+        
+        // Auto-conectar si hay IP guardada
+        const savedIp = localStorage.getItem('pdu_server_ip');
+        if (savedIp) {
+            document.getElementById('serverIp').value = savedIp;
+            connectToServer();
+        }
+        
+        // Guardar IP cuando se conecta
+        const originalConnect = connectToServer;
+        connectToServer = function() {
+            const ip = document.getElementById('serverIp').value;
+            localStorage.setItem('pdu_server_ip', ip);
+            originalConnect();
+        };
+        
+        showDeviceInfo();
+        window.addEventListener('resize', showDeviceInfo);
+    </script>
+</body>
+</html>
